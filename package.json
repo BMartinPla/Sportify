@@ -1,0 +1,21 @@
+{
+  "name": "sportify",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Autogestión de rutinas y seguimiento del progreso de entrenamiento",
+  "scripts": {
+    "dev": "node server/index.mjs",
+    "start": "node server/index.mjs --production",
+    "build": "vite build && node scripts/build-worker.mjs",
+    "test": "node --test tests/api.test.mjs",
+    "check": "node --check server/api.mjs && node --check server/index.mjs"
+  },
+  "engines": { "node": ">=22.13.0" },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "lucide-react": "^0.468.0"
+  },
+  "devDependencies": { "vite": "^7.3.0", "esbuild": "^0.25.0" }
+}
