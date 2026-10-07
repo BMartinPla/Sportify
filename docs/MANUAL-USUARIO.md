@@ -21,7 +21,7 @@ La primera rutina se convierte en principal. El menú de tres puntos permite edi
 
 ## Consultar un ejercicio
 
-En **Ejercicios** podés consultar imágenes e indicaciones mediante **Ver técnica**. El botón **+** permite elegir rutina, día, series, repeticiones y carga. Los primeros movimientos están traducidos al español; los ejercicios adicionales conservan la información original del catálogo. Una etiqueta indica si la fuente está conectada o si se está usando el respaldo local.
+En **Ejercicios** podés consultar imágenes e indicaciones mediante **Ver técnica**. El botón **+** permite elegir rutina, día, series, repeticiones y carga. Todos los ejercicios de la biblioteca incluyen nombre e indicaciones en español. Podés buscar por el nombre en español o por el original en inglés. Los ejercicios guardados previamente también muestran sus nombres traducidos, conservando las cargas y el historial. Una etiqueta indica si la fuente está conectada o si se está usando el respaldo local.
 
 ## Registrar un entrenamiento
 

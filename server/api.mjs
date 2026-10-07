@@ -1,5 +1,5 @@
 import { blankState, demoState, dateKey } from './seed.mjs';
-import { catalog, muscles, equipmentNames } from './catalog.mjs';
+import { catalog, exerciseName, localizeExercise } from './catalog.mjs';
 
 const encoder = new TextEncoder();
 const hex = bytes => [...new Uint8Array(bytes)].map(n=>n.toString(16).padStart(2,'0')).join('');
@@ -34,10 +34,17 @@ export async function insertUser(db,{email,name,password,role='member',state=bla
  const s=db.prepare('INSERT INTO user_state (user_id,data) VALUES (?,?)').bind(id,JSON.stringify(state));
  await db.batch([u,s]);return db.prepare('SELECT * FROM users WHERE id=?').bind(id).first();
 }
-async function readState(db,id){const row=await db.prepare('SELECT data,version FROM user_state WHERE user_id=?').bind(id).first();requireThat(row,'La cuenta ya no está disponible.',401);return {...JSON.parse(row.data),version:row.version};}
+async function readState(db,id){
+ const row=await db.prepare('SELECT data,version FROM user_state WHERE user_id=?').bind(id).first();
+ requireThat(row,'La cuenta ya no está disponible.',401);
+ const state=JSON.parse(row.data);
+ for(const routine of state.routines)for(const exercise of routine.exercises)exercise.name=exerciseName(exercise.id,exercise.name);
+ for(const log of state.logs)for(const entry of log.entries)entry.name=exerciseName(entry.exerciseId,entry.name);
+ return {...state,version:row.version};
+}
 async function mutate(db,id,callback){const state=await readState(db,id);const version=state.version;delete state.version;await callback(state);const result=await db.prepare('UPDATE user_state SET data=?,version=version+1 WHERE user_id=? AND version=?').bind(JSON.stringify(state),id,version).run();requireThat(resultChanges(result)===1,'Los datos cambiaron en otra ventana. Recargá y volvé a intentar.',409);return {...state,version:version+1};}
 function validateExercise(e){requireThat(str(e.id,150)&&str(e.name,150),'Elegí un ejercicio válido.');requireThat(Number.isInteger(e.day)&&e.day>=0&&e.day<=6,'El día no es válido.');requireThat(Number.isInteger(e.sets)&&numeric(e.sets,1,20)&&Number.isInteger(e.reps)&&numeric(e.reps,1,300)&&numeric(e.load,0,1000),'Usá entre 1 y 20 series, 1 y 300 repeticiones y una carga entre 0 y 1000 kg.');}
-function cleanExercise(e){validateExercise(e);return {id:e.id,name:e.name,muscle:String(e.muscle||'General').slice(0,40),equipment:String(e.equipment||'Otro').slice(0,40),sets:e.sets,reps:e.reps,load:e.load,day:e.day,entryId:str(e.entryId,100)?e.entryId:crypto.randomUUID()};}
+function cleanExercise(e){validateExercise(e);return {id:e.id,name:exerciseName(e.id,e.name),muscle:String(e.muscle||'General').slice(0,40),equipment:String(e.equipment||'Otro').slice(0,40),sets:e.sets,reps:e.reps,load:e.load,day:e.day,entryId:str(e.entryId,100)?e.entryId:crypto.randomUUID()};}
 function validateRoutine(data){requireThat(str(data.name,60),'El nombre de la rutina debe tener entre 1 y 60 caracteres.');requireThat(!data.description||typeof data.description==='string'&&data.description.length<=200,'La descripción admite hasta 200 caracteres.');requireThat(Array.isArray(data.exercises)&&data.exercises.length<=100,'Una rutina admite hasta 100 ejercicios.');data.exercises.forEach(validateExercise);}
 let exerciseCache=null;
 let exerciseRefresh=null;
@@ -49,7 +56,7 @@ async function exercises(){
   if(!response.ok)throw Error('upstream');
   const data=await response.json();if(!Array.isArray(data)||data.length<50)throw Error('format');
   const curated=new Map(catalog.map(e=>[e.id,e]));
-  const remote=data.map(e=>{const local=curated.get(e.id);return {id:e.id,name:local?.name||e.name,muscle:muscles[e.primaryMuscles?.[0]]||'General',equipment:equipmentNames[e.equipment]||'Otro',level:({beginner:'Inicial',intermediate:'Intermedio',expert:'Avanzado'})[e.level]||'Intermedio',instructions:local?.instructions||e.instructions||[],images:(e.images||[]).map(i=>`https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/${i}`),source:'Free Exercise DB',originalName:e.name};});
+  const remote=data.map(localizeExercise).filter(Boolean);
   const all=[...catalog.map(e=>({...e,source:'Free Exercise DB',...remote.find(x=>x.id===e.id)})),...remote.filter(e=>!curated.has(e.id))];
   exerciseCache={at:Date.now(),source:'live',items:all};return exerciseCache;
  }catch{return exerciseCache?{...exerciseCache,source:'cached'}:{at:Date.now(),source:'fallback',items:catalog};}finally{exerciseRefresh=null;}})();
@@ -175,5 +182,5 @@ function validateLog(data){
  requireThat(validDate(data.date),'Elegí una fecha válida, no futura.');requireThat(str(data.routineName,100)&&numeric(data.duration,1,600),'Indicá un nombre y una duración entre 1 y 600 minutos.');requireThat(Array.isArray(data.entries)&&data.entries.length>=1&&data.entries.length<=100,'Registrá al menos un ejercicio.');requireThat(!data.note||typeof data.note==='string'&&data.note.length<=500,'Las notas admiten hasta 500 caracteres.');
  data.entries.forEach(e=>requireThat(str(e.exerciseId,150)&&str(e.name,150)&&Number.isInteger(e.sets)&&numeric(e.sets,1,20)&&Number.isInteger(e.reps)&&numeric(e.reps,1,300)&&numeric(e.load,0,1000),'Revisá las series, repeticiones y cargas de los ejercicios.'));
 }
-function cleanLog(data){return {date:data.date,routineId:typeof data.routineId==='string'?data.routineId:null,routineName:data.routineName.trim(),duration:data.duration,note:data.note||'',entries:data.entries.map(e=>({exerciseId:e.exerciseId,name:e.name,sets:e.sets,reps:e.reps,load:e.load}))};}
+function cleanLog(data){return {date:data.date,routineId:typeof data.routineId==='string'?data.routineId:null,routineName:data.routineName.trim(),duration:data.duration,note:data.note||'',entries:data.entries.map(e=>({exerciseId:e.exerciseId,name:exerciseName(e.exerciseId,e.name),sets:e.sets,reps:e.reps,load:e.load}))};}
 async function deleteUser(db,id){await db.batch([db.prepare('DELETE FROM sessions WHERE user_id=?').bind(id),db.prepare('DELETE FROM user_state WHERE user_id=?').bind(id),db.prepare('DELETE FROM users WHERE id=?').bind(id)]);}

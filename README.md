@@ -50,7 +50,7 @@ npm run build
 node scripts/validate-artifact.mjs
 ```
 
-La suite cubre 21 escenarios con múltiples casos de aceptación: altas válidas e inválidas, autenticación, límite de rutinas, privacidad, siete días, veinte sesiones de progreso, diez cambios de perfil, mediciones, permisos administrativos y eliminación de cuentas. Consultá `docs/VALIDACION.md` para el alcance y los límites de la verificación.
+La suite cubre 23 escenarios con múltiples casos de aceptación: altas válidas e inválidas, autenticación, límite de rutinas, privacidad, siete días, veinte sesiones de progreso, diez cambios de perfil, mediciones, permisos administrativos y eliminación de cuentas. Consultá `docs/VALIDACION.md` para el alcance y los límites de la verificación.
 
 ## Estructura
 
@@ -64,6 +64,6 @@ La suite cubre 21 escenarios con múltiples casos de aceptación: altas válidas
 
 ## Fuentes y licencias
 
-Catálogo e imágenes de ejercicios: [Free Exercise DB](https://github.com/yuhonas/free-exercise-db), dominio público (Unlicense). Los ejercicios destacados incluyen indicaciones propias en español; el resto conserva las instrucciones originales en inglés. Fotografía de entrenamiento: [Unsplash](https://unsplash.com/photos/1517836357463-d25dfeac3438), servida como recurso local. Tipografías DM Sans y Barlow Condensed: Google Fonts, SIL Open Font License. Iconos: Lucide, ISC. React: MIT. Vite y esbuild: MIT. No se necesitan servicios pagos para ejecutar el proyecto localmente.
+Catálogo e imágenes de ejercicios: [Free Exercise DB](https://github.com/yuhonas/free-exercise-db), dominio público (Unlicense). El catálogo completo incluye nombres e instrucciones en español, distribuidos con la aplicación para no depender de un servicio de traducción al consultar ejercicios. Los movimientos destacados conservan indicaciones propias. Fotografía de entrenamiento: [Unsplash](https://unsplash.com/photos/1517836357463-d25dfeac3438), servida como recurso local. Tipografías DM Sans y Barlow Condensed: Google Fonts, SIL Open Font License. Iconos: Lucide, ISC. React: MIT. Vite y esbuild: MIT. No se necesitan servicios pagos para ejecutar el proyecto localmente.
 
 La administración de cuentas no representa un rol de entrenador. No se incluyen rutinas públicas, comunidad, aplicaciones móviles nativas, wearables ni asignación de rutinas a terceros.

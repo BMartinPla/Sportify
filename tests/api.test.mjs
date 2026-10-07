@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { createDatabase } from '../server/database.mjs';
 import { handleApi,insertUser } from '../server/api.mjs';
 import { dateKey } from '../server/seed.mjs';
+import spanishExercises from '../server/exercises.es.json' with { type: 'json' };
+import { exerciseText, localizeExercise } from '../server/catalog.mjs';
 
 function client(db){let cookie='';return {async request(path,method='GET',data,headers={}){const request=new Request('http://sportify.test/api'+path,{method,headers:{cookie,...(data?{'content-type':'application/json'}:{}),...headers},...(data?{body:JSON.stringify(data)}:{})});const response=await handleApi(request,db);if(response.headers.has('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];return {status:response.status,data:await response.json(),headers:response.headers};},get cookie(){return cookie;}};}
 const payload={name:'Socio de prueba',email:'socio@example.com',password:'PruebaSegura2026!'};
@@ -68,6 +70,35 @@ test('Seguridad: rechaza origen ajeno y solicitudes excesivas',async()=>{
 });
 test('Demo: dos visitantes reciben cuentas y datos independientes',async()=>{const db=createDatabase(':memory:'),a=client(db),b=client(db);const one=await a.request('/auth/demo','POST'),two=await b.request('/auth/demo','POST');assert.notEqual(one.data.user.id,two.data.user.id);assert.notEqual(one.data.state.routines[0].id,two.data.state.routines[0].id);assert.equal(one.data.state.logs.length,16);assert.equal(one.data.state.weights.length,10);assert.equal(one.data.state.profile.weight,one.data.state.weights.at(-1).value);db.close();});
 test('RF-04: catálogo utilizable, búsqueda y caché en 30 consultas',async()=>{
- const {db,a}=await fixture();const nativeFetch=globalThis.fetch;let calls=0;globalThis.fetch=async()=>{calls++;return new Response(JSON.stringify(Array.from({length:60},(_,i)=>({id:'exercise-'+i,name:'Test exercise '+i,primaryMuscles:['chest'],equipment:'dumbbell',level:'beginner',instructions:['Move with control.'],images:[]}))));};
- try{const times=[];for(let i=0;i<30;i++){const start=performance.now();const result=await a.request('/exercises?q=Test&muscle=Pecho&equipment=Mancuernas');times.push(performance.now()-start);assert.equal(result.status,200);assert.equal(result.data.items.length,60);assert.equal(result.data.source,'live');}assert.equal(calls,1);assert.ok(times.sort((a,b)=>a-b)[28]<3000);}finally{globalThis.fetch=nativeFetch;db.close();}
+ const {db,a}=await fixture();const nativeFetch=globalThis.fetch;let calls=0;globalThis.fetch=async()=>{calls++;return new Response(JSON.stringify(Object.keys(spanishExercises).slice(0,60).map((id,i)=>({id,name:'Test exercise '+i,primaryMuscles:['chest'],equipment:'dumbbell',level:'beginner',instructions:['Move with control.'],images:[]}))));};
+ try{const times=[];for(let i=0;i<30;i++){const start=performance.now();const result=await a.request('/exercises?q=Test&muscle=Pecho&equipment=Mancuernas');times.push(performance.now()-start);assert.equal(result.status,200);assert.equal(result.data.items.length,60);assert.equal(result.data.source,'live');for(const item of result.data.items){assert.equal(item.name,exerciseText(item.id).name);assert.deepEqual(item.instructions,exerciseText(item.id).instructions);assert.match(item.originalName,/^Test exercise /);}}assert.equal(calls,1);assert.ok(times.sort((a,b)=>a-b)[28]<3000);const search=await a.request('/exercises?q='+encodeURIComponent('máquina de abdominales'));assert.ok(search.data.items.some(e=>e.id==='Ab_Crunch_Machine'));}finally{globalThis.fetch=nativeFetch;db.close();}
+});
+
+test('Traducción: catálogo completo y nuevos ejercicios sin texto pendiente en inglés',()=>{
+ assert.equal(Object.keys(spanishExercises).length,876);
+ for(const [id,text] of Object.entries(spanishExercises)){
+  assert.ok(text.name.trim(),id);assert.ok(text.name.length<=150,id);assert.ok(text.instructions.length,id);
+  for(const step of text.instructions){assert.ok(step.trim(),id);assert.doesNotMatch(step,/ZX\d{5}ZX|\b(?:This will be your starting position|Repeat for|Lie down|Breathe out)\b/i,id);}
+ }
+ assert.equal(localizeExercise({id:'not-translated-yet',name:'Untranslated movement',instructions:['English text']}),null);
+ assert.equal(exerciseText('Face_Pull').name,'Jalón a la cara');
+});
+
+test('Traducción: rutinas e historial existentes conservan identificadores y cargas',async()=>{
+ const {db,a}=await fixture();
+ const created=await a.request('/routines','POST',{...routine(),exercises:[{...exercise(0),id:'Arnold_Dumbbell_Press',name:'Arnold Dumbbell Press'}]});
+ const savedRoutine=created.data.routines[0];
+ await a.request('/logs','POST',{...log(),routineId:savedRoutine.id,entries:[{...log().entries[0],exerciseId:'Arnold_Dumbbell_Press',name:'Arnold Dumbbell Press'}]});
+ const user=(await a.request('/auth/me')).data.user;
+ const row=await db.prepare('SELECT data,version FROM user_state WHERE user_id=?').bind(user.id).first();
+ const legacy=JSON.parse(row.data);
+ legacy.routines[0].exercises[0].name='Arnold Dumbbell Press';legacy.logs[0].entries[0].name='Arnold Dumbbell Press';
+ await db.prepare('UPDATE user_state SET data=? WHERE user_id=?').bind(JSON.stringify(legacy),user.id).run();
+ const state=(await a.request('/state')).data;
+ assert.equal(state.routines[0].exercises[0].name,'Press Arnold con mancuernas');assert.equal(state.logs[0].entries[0].name,'Press Arnold con mancuernas');
+ assert.deepEqual({...state.routines[0].exercises[0],name:'Arnold Dumbbell Press'},legacy.routines[0].exercises[0]);
+ assert.deepEqual({...state.logs[0].entries[0],name:'Arnold Dumbbell Press'},legacy.logs[0].entries[0]);
+ assert.equal(state.version,row.version);assert.equal(state.logs[0].date,legacy.logs[0].date);
+ assert.equal((await a.request('/auth/me')).data.state.routines[0].exercises[0].name,'Press Arnold con mancuernas');
+ db.close();
 });

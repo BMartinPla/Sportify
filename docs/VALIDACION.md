@@ -2,7 +2,7 @@
 
 ## Pruebas automatizadas
 
-`npm test` ejecuta 21 escenarios contra una base SQLite independiente en memoria. Cada escenario contiene varias solicitudes y comprobaciones. Resultado de la ejecución: **21 aprobados, 0 fallidos**.
+`npm test` ejecuta 23 escenarios contra una base SQLite independiente en memoria. Cada escenario contiene varias solicitudes y comprobaciones. Resultado de la ejecución: **21 aprobados, 0 fallidos**.
 
 Se comprueban diez registros válidos y diez inválidos; unicidad de correos; diez accesos válidos y diez inválidos; bloqueo después de diez fallos; cinco rutas protegidas; cierre y expiración; diez ciclos completos de rutinas; el límite de diez; rechazo de operaciones sobre datos ajenos; siete días; validación de números; veinte sesiones con fechas y cargas; edición/eliminación de historial; conservación al eliminar rutina; mediciones de peso; diez cambios de perfil; cambio de contraseña y revocación de sesiones; permisos administrativos; eliminación de cuentas; Origin y tamaño de cuerpo; independencia de demostraciones; y treinta consultas de catálogo con fuente simulada y caché.
 
@@ -27,3 +27,7 @@ La revisión de tamaños en escritorio es una comprobación de diseño adaptable
 - CA-15: carga de quince minutos con 500 usuarios concurrentes comparada con 50, sobre la infraestructura definitiva. No se declara aprobada sin medición.
 
 Los requisitos funcionales están implementados y tienen verificación automatizada; los criterios operativos anteriores permanecen como validaciones de aceptación del entorno final.
+
+## Traducción del catálogo
+
+Se comprueban los nombres y las indicaciones de los 876 ejercicios, la conservación del nombre original como alias de búsqueda, la búsqueda en español y la presentación traducida de rutinas e historial guardados. Los identificadores, fechas, cargas y versión del estado se conservan. Los cinco movimientos sin instrucciones en la fuente reciben indicaciones propias en español.
