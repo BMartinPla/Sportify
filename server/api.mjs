@@ -88,12 +88,16 @@ export async function handleApi(request,db){
   await db.prepare('DELETE FROM login_attempts WHERE key=?').bind(key).run();return makeSession(user);
  }
  if(path==='/api/auth/demo'&&method==='POST'){
-  const user=await insertUser(db,{name:'Mateo',email:`demo-${crypto.randomUUID()}@sportify.local`,password:random(),state:demoState()});return makeSession(user);
+  const user=await insertUser(db,{name:'Usuario',email:`demo-${crypto.randomUUID()}@sportify.local`,password:random(),state:demoState()});return makeSession(user);
  }
  const token=request.headers.get('cookie')?.match(/(?:^|;\s*)sportify_session=([a-f0-9]{64})(?:;|$)/)?.[1];
  const tokenHash=token?await digest(token):'';
  const user=token?await db.prepare('SELECT u.* FROM users u JOIN sessions s ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? AND u.active=1').bind(tokenHash,Date.now()).first():null;
  requireThat(user,'Iniciá sesión para continuar.',401);
+ if(user.name==='Mateo'&&/^demo-[0-9a-f-]{36}@sportify\.local$/.test(user.email)){
+  await db.prepare("UPDATE users SET name='Usuario' WHERE id=? AND name='Mateo'").bind(user.id).run();
+  user.name='Usuario';
+ }
  if(path==='/api/auth/me'&&method==='GET')return json({user:publicUser(user),state:await readState(db,user.id)});
  if(path==='/api/auth/logout'&&method==='POST'){await db.prepare('DELETE FROM sessions WHERE token_hash=?').bind(tokenHash).run();return json({ok:true},200,{'Set-Cookie':`sportify_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure?'; Secure':''}`});}
  if(path==='/api/state'&&method==='GET')return json(await readState(db,user.id));
